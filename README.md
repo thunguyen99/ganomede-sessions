@@ -1,69 +1,90 @@
-Users' API
-----------
+Rules API
+---------
 
-# Metadata
+This is a protocol to implement by "rules" services.
 
-## /users/:id/metadata/:id [GET]
+Rules services use no storage, they should be pure compute services.
 
-## /users/:id/metadata/:id [POST]
+# Game
 
-# User accounts
+A game has the following fields:
 
-User accounts API is fully inspired by Stormpath.
+ * `id`
+ * `players`: Array of players username
+ * `turn`: username of the next player
+ * `status`: one of
+   * `active`
+   * `gameover`
+ * `gameData`: game specific data
 
-See http://docs.stormpath.com/rest/product-guide/#application-accounts when in doubt about a parameter.
+# Moves
 
-## /users/accounts [POST]
+`moveData` and `moveResult` are game specific.
 
-### body (application/json)
+# /{type}/games [POST]
 
-    {
-        username: 'tk421',
-        givenName: 'Joe',
-        surname: 'Stormtrooper',
-        email: 'tk421@stormpath.com',
-        password: 'Changeme1'
-    }
++ Parameters
+    + type (string) ... Type of game
 
-### response [201]
-
-    {
-        token: 'rAnDoM'
-    }
-
-## /users/accounts/:login [GET]
-
-### response [200] OK
+## body (application/json)
 
     {
-        "username": "tk421",
-        "givenName": "Joe",
-        "surname": "Stormtrooper",
-        "email": "tk421@stormpath.com"
+        "id": "string",
+        "players": [ "some_username", "other_username" ]
     }
 
-## /users/loginAttempt [POST]
-
-### response [200] OK
+## response [200] OK
 
     {
-        "token": "0123456789abcdef012345"
+        "id": "string",
+        "players": [ "some_username", "other_username" ],
+        "turn": "some_username",
+        "status": "active",
+        "gameData": {
+            ... game specific data ...
+        }
     }
 
-### body (application/json)
+## /{type}/moves [POST]
+
++ Parameters
+    + type (string) ... Type of game
+
+## body (application/json)
 
     {
-        "type": "basic",
-        "value": "0123456789abcdef012345"
+        "id": "string",
+        "players": [ "some_username", "other_username" ],
+        "turn": "some_username",
+        "status": "active",
+        "gameData": {
+            ... game specific data ...
+        },
+        "moveData": {
+            ... game specific data ...
+        }
     }
 
-## /users/verificationEmails
-
-### body (application/json)
+## response [200] OK
 
     {
-        login: 'tk421'
+        "id": "string",
+        "players": [ "some_username", "other_username" ],
+        "turn": "other_username",
+        "status": "active",
+        "gameData": {
+            ... more game specific data ...
+        },
+        "moveResult" {
+            ... game specific data ...
+        }
     }
 
-### response [202] Accepted
+## response [400] Bad Request
+
+    {
+        "code": "InvalidPosition"
+    }
+
+List of codes will be application dependent.
 

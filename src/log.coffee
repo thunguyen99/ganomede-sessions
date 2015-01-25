@@ -4,7 +4,7 @@ log = bunyan.createLogger name: "users"
 # class used by elasticsearch for logging
 log.ElasticLogger = class
   constructor: (config) ->
-    log = log
+    @log = log
     @error = log.error.bind log
     @warning = log.warn.bind log
     @info = log.info.bind log
