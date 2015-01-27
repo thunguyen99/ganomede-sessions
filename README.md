@@ -1,42 +1,64 @@
-Rules API
+Turn-Game
 ---------
 
-This is a protocol to implement by "rules" services.
+Manage a turn based game session.
 
-Rules services use no storage, they should be pure compute services.
+Relations
+---------
 
-# Game
+The turn-game module will:
 
-A game has the following fields:
+ * Manage the `couch_games` CouchDB database.
+ * Perform moves requested by clients using rules-api services, update `couch_games`.
+ * Find running rules-api services using the `redis_registry`.
+ * Use the `redis_auth` database to check requester identity.
 
- * `id`
- * `players`: Array of players username
- * `turn`: username of the next player
- * `status`: one of
-   * `active`
-   * `gameover`
- * `gameData`: game specific data
+Configuration
+-------------
 
-# Moves
+ * `GANOMEDE_REDIS_AUTH_PORT_6379_TCP_ADDR` - IP of the AuthDB redis
+ * `GANOMEDE_REDIS_AUTH_PORT_6379_TCP_PORT` - Port of the AuthDB redis
+ * `GANOMEDE_REDIS_REGISTRY_PORT_6379_TCP_ADDR` - IP of the Registry redis
+ * `GANOMEDE_REDIS_REGISTRY_PORT_6379_TCP_PORT` - Port of the Registry redis
 
-`moveData` and `moveResult` are game specific.
+API
+---
 
-# /{type}/games [POST]
+All requests made to the turngame API require an auth token, passed in the request URL.
 
-+ Parameters
-    + type (string) ... Type of game
+# /turngame/auth/:token/games/:id [GET]
+
+## response [200] OK
+
+    {
+        "type": "triominos-1.0",
+        "players": [ "some_username_1", "some_username_2" ],
+        "turn": "some_username_1",
+        "state": "active",
+        "data": { ... }
+    }
+
+Possible states:
+ * active
+ * over
+
+# /turngame/auth/:token/games [POST]
+
+## parameters
+
+    + token (string) ... Authentication token
 
 ## body (application/json)
 
     {
-        "id": "string",
-        "players": [ "some_username", "other_username" ]
+        "type": "triominos-1.0",
+        "players": [ "some_username_1", "some_username_2" ]
     }
 
 ## response [200] OK
 
     {
-        "id": "string",
+        "id": "1234"
         "players": [ "some_username", "other_username" ],
         "turn": "some_username",
         "status": "active",
@@ -45,24 +67,17 @@ A game has the following fields:
         }
     }
 
-## /{type}/moves [POST]
+# /turngame/auth/:token/games/:id/moves [POST]
 
-+ Parameters
-    + type (string) ... Type of game
+## parameters
+
+    + token (string) ... Authentication token
+    + id (string) ... ID of the game
 
 ## body (application/json)
 
     {
-        "id": "string",
-        "players": [ "some_username", "other_username" ],
-        "turn": "some_username",
-        "status": "active",
-        "gameData": {
-            ... game specific data ...
-        },
-        "moveData": {
-            ... game specific data ...
-        }
+        "move": { ... }
     }
 
 ## response [200] OK
@@ -73,7 +88,7 @@ A game has the following fields:
         "turn": "other_username",
         "status": "active",
         "gameData": {
-            ... more game specific data ...
+            ... game specific data ...
         },
         "moveResult" {
             ... game specific data ...
@@ -87,4 +102,31 @@ A game has the following fields:
     }
 
 List of codes will be application dependent.
+
+
+# /turngame/auth/:token/games/:id/moves [GET]
+
+List moves made on the given game.
+
+## parameters
+
+    + token (string) ... Authentication token
+    + id (string) ... ID of the game
+
+## response [200] OK
+
+    [
+        {
+            "player": "some_username",
+            "move": { ... }
+        },
+        {
+            "player": "other_username",
+            "move": { ... }
+        },
+        {
+            "player": "some_username",
+            "move": { ... }
+        }
+    ]
 
