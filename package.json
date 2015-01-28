@@ -1,7 +1,8 @@
 {
-  "name": "triominos",
-  "version": "0.0.1",
-  "description": "triominos rules micro service",
+  "name": "turngame",
+  "version": "1.0.1",
+  "api": "turngame/v1",
+  "description": "turngame micro service",
   "private": true,
   "main": "index.js",
   "scripts": {
