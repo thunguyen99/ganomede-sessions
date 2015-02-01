@@ -8,30 +8,37 @@ Relations
 
 The turn-game module will:
 
- * Manage the `couch_games` CouchDB database.
- * Perform moves requested by clients using rules-api services, update `couch_games`.
- * Find running rules-api services using the `redis_registry`.
+ * Manage the `redis_games` redis database.
+ * Perform moves requested by clients using rules-api services, update `redis_games`.
+ * Find running rules-api services using the `registry`.
  * Use the `redis_auth` database to check requester identity.
 
 Configuration
 -------------
 
- * `GANOMEDE_REDIS_AUTH_PORT_6379_TCP_ADDR` - IP of the AuthDB redis
- * `GANOMEDE_REDIS_AUTH_PORT_6379_TCP_PORT` - Port of the AuthDB redis
- * `GANOMEDE_REDIS_REGISTRY_PORT_6379_TCP_ADDR` - IP of the Registry redis
- * `GANOMEDE_REDIS_REGISTRY_PORT_6379_TCP_PORT` - Port of the Registry redis
+ * `REDIS_AUTH_PORT_6379_TCP_ADDR` - IP of the AuthDB redis
+ * `REDIS_AUTH_PORT_6379_TCP_PORT` - Port of the AuthDB redis
+ * `REGISTRY_PORT_8000_TCP_ADDR` - IP of the registry service
+ * `REGISTRY_PORT_8000_TCP_PORT` - Port of the registry service
 
 API
 ---
 
 All requests made to the turngame API require an auth token, passed in the request URL.
 
-# /turngame/auth/:token/games/:id [GET]
+# Single Game [/turngame/auth/:token/games/:id]
+
+    + Parameters
+        + token (string) ... User authentication token
+        + id (string) ... ID of the game
+
+## Retrieve a game state [GET]
 
 ## response [200] OK
 
     {
-        "type": "triominos-1.0",
+        "id": "ab12345789",
+        "type": "triominos/v1",
         "players": [ "some_username_1", "some_username_2" ],
         "turn": "some_username_1",
         "state": "active",
@@ -39,48 +46,51 @@ All requests made to the turngame API require an auth token, passed in the reque
     }
 
 Possible states:
+
  * active
  * over
 
-# /turngame/auth/:token/games [POST]
+# Games Collection [/turngame/auth/:token/games]
 
-## parameters
+    + Parameters
+        + token (string) ... User authentication token
 
-    + token (string) ... Authentication token
+## Create a game [POST]
 
-## body (application/json)
+### body (application/json)
 
     {
-        "type": "triominos-1.0",
+        "type": "triominos/v1",
         "players": [ "some_username_1", "some_username_2" ]
     }
 
-## response [200] OK
+### response [200] OK
 
     {
-        "id": "1234"
+        "id": "1234",
         "players": [ "some_username", "other_username" ],
         "turn": "some_username",
-        "status": "active",
+        "state": "active",
         "gameData": {
             ... game specific data ...
         }
     }
 
-# /turngame/auth/:token/games/:id/moves [POST]
+# Moves Collection [/turngame/auth/:token/games/:id/moves]
 
-## parameters
+    + Parameters
+        + token (string) ... Authentication token
+        + id (string) ... ID of the game
 
-    + token (string) ... Authentication token
-    + id (string) ... ID of the game
+## Add a move to a game [POST]
 
-## body (application/json)
+### body (application/json)
 
     {
         "move": { ... }
     }
 
-## response [200] OK
+### response [200] OK
 
     {
         "id": "string",
@@ -95,7 +105,7 @@ Possible states:
         }
     }
 
-## response [400] Bad Request
+### response [400] Bad Request
 
     {
         "code": "InvalidPosition"
@@ -103,17 +113,9 @@ Possible states:
 
 List of codes will be application dependent.
 
+## List moves made on the given game [GET]
 
-# /turngame/auth/:token/games/:id/moves [GET]
-
-List moves made on the given game.
-
-## parameters
-
-    + token (string) ... Authentication token
-    + id (string) ... ID of the game
-
-## response [200] OK
+### response [200] OK
 
     [
         {
