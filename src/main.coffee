@@ -3,7 +3,7 @@ aboutApi = require "./about-api"
 pingApi = require "./ping-api"
 
 addRoutes = (prefix, server) ->
-  log.info "adding routes"
+  log.info "adding routes to #{prefix}"
 
   # Platform Availability
   pingApi.addRoutes prefix, server
