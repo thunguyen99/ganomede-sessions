@@ -41,19 +41,63 @@ All requests made to the turngame API require an auth token, passed in the reque
         "type": "triominos/v1",
         "players": [ "some_username_1", "some_username_2" ],
         "turn": "some_username_1",
-        "state": "active",
-        "data": { ... }
+        "status": "active",
+        "gameData": { ... }
     }
 
-Possible states:
+Possible status:
 
+ * inactive
  * active
  * over
+
+## Edit a game [PUT]
+
+### body (application/json)
+
+    {
+        "status": "active"
+    }
+
+## response [200] OK
+
+    {
+        "id": "ab12345789",
+        "type": "triominos/v1",
+        "players": [ "some_username_1", "some_username_2" ],
+        "turn": "some_username_1",
+        "status": "active",
+        "gameData": { ... }
+    }
+
+### note
+
+The only change allowed using this method is to change "status" from "inactive" to "active".
 
 # Games Collection [/turngame/auth/:token/games]
 
     + Parameters
         + token (string) ... User authentication token
+
+## List games [GET]
+
+List all the "active" games of the authenticated player.
+
+### response [200] OK
+
+    [{
+        "id": "1234",
+        "type": "triominos/v1",
+        "players": [ "some_username", "other_username" ],
+        "turn": "some_username",
+        "status": "active"
+    }, {
+        "id": "1235",
+        "type": "triominos/v1",
+        "players": [ "some_username", "amigo" ],
+        "turn": "amigo",
+        "status": "active"
+    }]
 
 ## Create a game [POST]
 
@@ -68,13 +112,18 @@ Possible states:
 
     {
         "id": "1234",
+        "type": "triominos/v1",
         "players": [ "some_username", "other_username" ],
         "turn": "some_username",
-        "state": "active",
+        "status": "inactive",
         "gameData": {
             ... game specific data ...
         }
     }
+
+### note
+
+Once status set to "active", the game will appear in the games collection of both player.
 
 # Moves Collection [/turngame/auth/:token/games/:id/moves]
 
@@ -94,6 +143,7 @@ Possible states:
 
     {
         "id": "string",
+        "type": "triominos/v1",
         "players": [ "some_username", "other_username" ],
         "turn": "other_username",
         "status": "active",
