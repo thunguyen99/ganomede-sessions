@@ -8,9 +8,9 @@ Relations
 
 The turn-game module will:
 
- * Manage the `redis_games` redis database.
+ * Manage in-progress games in the `redis_games` redis database.
  * Perform moves requested by clients using rules-api services, update `redis_games`.
- * Find running rules-api services using the `registry`.
+ * Archive finished games in `couch_games`.
  * Use the `redis_auth` database to check requester identity.
 
 Configuration
@@ -18,15 +18,17 @@ Configuration
 
  * `REDIS_AUTH_PORT_6379_TCP_ADDR` - IP of the AuthDB redis
  * `REDIS_AUTH_PORT_6379_TCP_PORT` - Port of the AuthDB redis
- * `REGISTRY_PORT_8000_TCP_ADDR` - IP of the registry service
- * `REGISTRY_PORT_8000_TCP_PORT` - Port of the registry service
+ * `REDIS_GAMES_PORT_6379_TCP_ADDR` - IP of the games redis
+ * `REDIS_GAMES_PORT_6379_TCP_PORT` - Port of the games redis
+ * `COUCH_GAMES_PORT_5984_TCP_ADDR` - IP of the games couchdb
+ * `COUCH_GAMES_PORT_5984_TCP_PORT` - Port of the games couchdb
 
 API
 ---
 
 All requests made to the turngame API require an auth token, passed in the request URL.
 
-# Single Game [/turngame/auth/:token/games/:id]
+# Single Game [/turngame/v1/auth/:token/games/:id]
 
     + Parameters
         + token (string) ... User authentication token
@@ -34,7 +36,7 @@ All requests made to the turngame API require an auth token, passed in the reque
 
 ## Retrieve a game state [GET]
 
-## response [200] OK
+### response [200] OK
 
     {
         "id": "ab12345789",
@@ -47,9 +49,13 @@ All requests made to the turngame API require an auth token, passed in the reque
 
 Possible status:
 
- * inactive
- * active
- * over
+ * `inactive`
+ * `active`
+ * `gameover`
+
+### design note
+
+The game should be retrieved from the redis database, if not present then we will look in the couchdb database.
 
 ## Edit a game [PUT]
 
@@ -59,7 +65,7 @@ Possible status:
         "status": "active"
     }
 
-## response [200] OK
+### response [200] OK
 
     {
         "id": "ab12345789",
@@ -70,11 +76,13 @@ Possible status:
         "gameData": { ... }
     }
 
-### note
+### response [423] Locked
 
-The only change allowed using this method is to change "status" from "inactive" to "active".
+### design note
 
-# Games Collection [/turngame/auth/:token/games]
+The only change allowed using this method is to change "status" from "inactive" to "active". Will reply with status 423 otherwise.
+
+# Games Collection [/turngame/v1/auth/:token/games]
 
     + Parameters
         + token (string) ... User authentication token
@@ -99,13 +107,22 @@ List all the "active" games of the authenticated player.
         "status": "active"
     }]
 
+### design note
+
+Active games will all be in the redis database. CouchDB only contains games with status=`gameover`.
+
 ## Create a game [POST]
+
+Use the appropriate `rules-api` service to initiate a new game.
 
 ### body (application/json)
 
     {
         "type": "triominos/v1",
-        "players": [ "some_username_1", "some_username_2" ]
+        "players": [ "some_username_1", "some_username_2" ],
+        "gameConfig": {
+            ... game specific data to be passed to the rules-api ...
+        }
     }
 
 ### response [200] OK
@@ -121,11 +138,15 @@ List all the "active" games of the authenticated player.
         }
     }
 
-### note
+### design notes
 
-Once status set to "active", the game will appear in the games collection of both player.
+Only when status set to "active", the game will appear in the games collection of both player.
 
-# Moves Collection [/turngame/auth/:token/games/:id/moves]
+Until then, it's waiting for activation... Hopefully it should be listed in the players' invitations.
+
+Inactive games will have an expiry date of 1 month.
+
+# Moves Collection [/turngame/v1/auth/:token/games/:id/moves]
 
     + Parameters
         + token (string) ... Authentication token
@@ -136,7 +157,7 @@ Once status set to "active", the game will appear in the games collection of bot
 ### body (application/json)
 
     {
-        "move": { ... }
+        "moveData": { ... }
     }
 
 ### response [200] OK
@@ -161,7 +182,13 @@ Once status set to "active", the game will appear in the games collection of bot
         "code": "InvalidPosition"
     }
 
-List of codes will be application dependent.
+List of codes will be application dependent, as returned by the `rules-api`
+
+### design note
+
+This call will use the rules-api to perform a move, update the redis database if it was accepted, send the result to the user.
+
+Additionally, if the game state was changed from "active" to "gameover", the game should be archived in the CouchDB database.
 
 ## List moves made on the given game [GET]
 
@@ -182,3 +209,8 @@ List of codes will be application dependent.
         }
     ]
 
+### design note
+
+It's a similar logic than that of the GET single game call. Check redis first, then couchdb.
+
+Having the list of moves at a different endpoint is an optimisation, because this list of moves may be quite long and is in only usefull to view a replay of a previous game.
