@@ -28,7 +28,7 @@ class Games
           id: id
         return callback(err)
 
-      callback(null, JSON.parse(json))
+      callback(null, if json then JSON.parse(json) else null)
 
   addMove: (id, move) ->
   moves: (id) ->

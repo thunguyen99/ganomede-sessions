@@ -1,8 +1,10 @@
 restify = require 'restify'
 authdb = require 'authdb'
+redis = require 'redis'
 config = require '../../config'
+Games = require './games'
 
-module.exports = (options) ->
+module.exports = (options={}) ->
   #
   # Initialization
   #
@@ -10,6 +12,11 @@ module.exports = (options) ->
   authdbClient = options.authdbClient || authdb.createClient(
     host: config.authdb.host
     port: config.authdb.port)
+
+  games = options.games || new Games(
+    redis.createClient(config.redis.port, config.redis.host)
+    config.redis.prefix
+  )
 
   #
   # Middlewares
@@ -32,12 +39,28 @@ module.exports = (options) ->
       req.params.user = account
       next()
 
+  # Populates req.params.game with game's state based in req.params.gameId
+  retrieveGameMiddleware = (req, res, next) ->
+    gameId = req.params.gameId
+    if !gameId
+      return next(new restify.InvalidContentError('invalid content'))
+
+    games.state gameId, (err, state) ->
+      if (err)
+        return next(new restify.InternalServerError)
+
+      if (!state)
+        return next(new restify.NotFoundError)
+
+      req.params.game = state
+      next()
+
   #
   # Routes
   #
 
   retrieveGame = (req, res, next) ->
-    next(new restify.NotImplementedError)
+    res.json(req.params.game)
 
   retrieveMoves = (req, res, next) ->
     next(new restify.NotImplementedError)
@@ -47,11 +70,11 @@ module.exports = (options) ->
 
   return (prefix, server) ->
     # Single Game
-    server.get "/#{prefix}/auth/:token/games/:id",
-      authMiddleware, retrieveGame
-    server.get "/#{prefix}/auth/:token/games/:id/moves",
+    server.get "/#{prefix}/auth/:authToken/games/:gameId",
+      authMiddleware, retrieveGameMiddleware, retrieveGame
+    server.get "/#{prefix}/auth/:authToken/games/:gameId/moves",
       authMiddleware, retrieveMoves
-    server.post "/#{prefix}/auth/:token/games/:id/moves",
+    server.post "/#{prefix}/auth/:authToken/games/:gameId/moves",
       authMiddleware, addMove
 
     # TODO:
