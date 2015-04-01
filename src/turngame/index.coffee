@@ -38,16 +38,21 @@ module.exports = (options) ->
 
   retrieveGame = (req, res, next) ->
     next(new restify.NotImplementedError)
-    next()
 
-  editGame = (req, res, next) ->
+  retrieveMoves = (req, res, next) ->
     next(new restify.NotImplementedError)
-    next()
+
+  addMove = (req, res, next) ->
+    next(new restify.NotImplementedError)
 
   return (prefix, server) ->
     # Single Game
-    server.get "/#{prefix}/auth/:token/games/:id", authMiddleware, retrieveGame
-    server.put "/#{prefix}/auth/:token/games/:id", authMiddleware, editGame
+    server.get "/#{prefix}/auth/:token/games/:id",
+      authMiddleware, retrieveGame
+    server.get "/#{prefix}/auth/:token/games/:id/moves",
+      authMiddleware, retrieveMoves
+    server.post "/#{prefix}/auth/:token/games/:id/moves",
+      authMiddleware, addMove
 
     # TODO:
     # Game Collection

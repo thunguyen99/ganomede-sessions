@@ -6,8 +6,10 @@ describe "turngame-api", ->
     describe 'GET /auth/:token/games/:id', () ->
       it 'retrieves game state by its ID'
 
-    describe 'PUT /auth/:token/games/:id', () ->
-      it 'changes game status from INACTIVE to ACTIVE'
-      it 'discrads any other change with HTTP 423'
+    describe 'GET /auth/:token/games/:id/moves', () ->
+      it 'retrieves moves made in a game'
+
+    describe 'POST /auth/:token/games/:id/moves', () ->
+      it 'adds move to a game'
 
 # vim: ts=2:sw=2:et:

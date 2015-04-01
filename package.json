@@ -37,6 +37,8 @@
     }
   },
   "devDependencies": {
-    "expect.js": "^0.3.1"
+    "expect.js": "^0.3.1",
+    "fakeredis": "^0.3.1",
+    "supertest": "^0.15.0"
   }
 }
