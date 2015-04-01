@@ -48,6 +48,11 @@ describe "turngame-api", ->
             expect(res.body).to.eql(game)
             done()
 
+      it 'only game participants are allowed', (done) ->
+        go()
+          .get endpoint("/auth/#{users.jdoe.token}/games/#{game.id}")
+          .expect 403, done
+
     describe 'GET /auth/:token/games/:id/moves', () ->
       it 'retrieves moves made in a game'
 

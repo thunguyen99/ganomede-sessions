@@ -2,6 +2,7 @@ module.exports =
   users:
     'alice': {username: 'alice', token: 'alice-token'}
     'bob': {username: 'bob', token: 'bob-token'}
+    'jdoe': {username: 'jdoe', token: 'jdoe-token'}
 
   game:
     id: 'game-id'

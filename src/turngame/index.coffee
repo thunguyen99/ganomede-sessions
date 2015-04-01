@@ -55,6 +55,11 @@ module.exports = (options={}) ->
       req.params.game = state
       next()
 
+  # Checks that user is participant in req.params.game. Sends 403 otherwise.
+  participantsOnly = (req, res, next) ->
+    participant = 0 <= req.params.game.players.indexOf(req.params.user.username)
+    if participant then next() else next(new restify.ForbiddenError)
+
   #
   # Routes
   #
@@ -71,7 +76,7 @@ module.exports = (options={}) ->
   return (prefix, server) ->
     # Single Game
     server.get "/#{prefix}/auth/:authToken/games/:gameId",
-      authMiddleware, retrieveGameMiddleware, retrieveGame
+      authMiddleware, retrieveGameMiddleware, participantsOnly, retrieveGame
     server.get "/#{prefix}/auth/:authToken/games/:gameId/moves",
       authMiddleware, retrieveMoves
     server.post "/#{prefix}/auth/:authToken/games/:gameId/moves",
