@@ -1,0 +1,36 @@
+fakeRedis = require 'fakeredis'
+expect = require 'expect.js'
+Games = require '../../src/turngame/games'
+config = require '../../config'
+samples = require './sample-data'
+
+describe 'Games', () ->
+  redis = fakeRedis.createClient(__filename)
+  games = new Games(redis, config.redis.prefix)
+  game = samples.game
+
+  after (done) ->
+    redis.flushdb(done)
+
+  it '#key() generates redis keys', () ->
+    key = games.key(game.id)
+    movesKey = games.key(game.id, 'moves')
+    expectedKey = [config.redis.prefix, 'games', game.id].join ':'
+    expectedMovesKey = [config.redis.prefix, 'games', game.id, 'moves'].join ':'
+
+    expect(key).to.be(expectedKey)
+    expect(movesKey).to.be(expectedMovesKey)
+
+  it '#setState() updates state of game by game ID', (done) ->
+    games.setState game.id, game, (err) ->
+      expect(err).to.be(null)
+      done()
+
+  it '#state() retrieves game\'s state from redis by game ID', (done) ->
+    games.state game.id, (err, state) ->
+      expect(err).to.be(null)
+      expect(state).to.eql(game)
+      done()
+
+  it '#addMove() adds move to game by game ID'
+  it '#moves() retrieves game\'s moves from redis by game ID'
