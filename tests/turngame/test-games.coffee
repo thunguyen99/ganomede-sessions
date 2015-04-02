@@ -8,6 +8,9 @@ describe 'Games', () ->
   redis = fakeRedis.createClient(__filename)
   games = new Games(redis, config.redis.prefix)
   game = samples.game
+  moves = [
+    {player: game.players[0], move: {data: 'move-0-data'}}
+  ]
 
   after (done) ->
     redis.flushdb(done)
@@ -32,5 +35,13 @@ describe 'Games', () ->
       expect(state).to.eql(game)
       done()
 
-  it '#addMove() adds move to game by game ID'
-  it '#moves() retrieves game\'s moves from redis by game ID'
+  it '#addMove() adds move to game by game ID', (done) ->
+    games.addMove game.id, moves[0], (err) ->
+      expect(err).to.be(null)
+      done()
+
+  it '#moves() retrieves game\'s moves from redis by game ID', (done) ->
+    games.moves game.id, (err, movesReturned) ->
+      expect(err).to.be(null)
+      expect(movesReturned).to.eql(moves)
+      done()
