@@ -84,7 +84,11 @@ module.exports = (options={}) ->
   # populates req.params.newGameState and calls next().
   verifyMove = (req, res, next) ->
     game = clone(req.params.game)
-    game.moveData = req.body.moveData
+    game.moveData = req.body?.moveData
+
+    if !game.moveData
+      return next(new restify.BadRequestError('MissingMoveData'))
+
     rules = new RulesClient restify.createJsonClient(
       url: urllib.format
         protocol: 'http'
@@ -133,7 +137,8 @@ module.exports = (options={}) ->
     server.get "/#{prefix}/auth/:authToken/games/:gameId/moves",
       authMiddleware, retrieveGameMiddleware, participantsOnly, retrieveMoves
     server.post "/#{prefix}/auth/:authToken/games/:gameId/moves",
-      authMiddleware, retrieveGameMiddleware, verifyMove, addMove
+      authMiddleware, retrieveGameMiddleware, participantsOnly,
+      verifyMove, addMove
 
     # TODO:
     # Game Collection

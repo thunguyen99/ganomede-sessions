@@ -108,4 +108,26 @@ describe "turngame-api", ->
             expect(res.body).to.eql(samples.gameNew)
             done()
 
+      it 'replies with 400 in case of missing body.moveData', (done) ->
+        go()
+          .post endpoint("/auth/#{users.bob.token}/games/#{game.id}/moves")
+          .send {}
+          .expect 400, done
+
+      it 'requires valid authToken', (done) ->
+        go()
+          .post endpoint("/auth/invalid-token/games/#{game.id}/moves")
+          .expect 401, done
+
+      it 'only game participants are allowed', (done) ->
+        go()
+          .post endpoint("/auth/#{users.jdoe.token}/games/#{game.id}/moves")
+          .send {moveData: 'w/ever'}
+          .expect 403, done
+
+      it 'replies with http 404 if game was not found', (done) ->
+        go()
+          .post endpoint("/auth/#{users.jdoe.token}/games/bad-#{game.id}/moves")
+          .expect 404, done
+
 # vim: ts=2:sw=2:et:
