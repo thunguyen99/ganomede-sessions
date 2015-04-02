@@ -80,14 +80,29 @@ module.exports = (options={}) ->
       res.json(moves)
       next()
 
+  # Checks basic sanity of move being performed
+  # (game must not be over, whose turn it is, etc.)
+  validateMoveData = (req, res, next) ->
+    game = req.params.game
+    move = req.body?.moveData
+    user = req.params.user
+
+    if !move
+      return next(new restify.BadRequestError('MissingMoveData'))
+
+    if game.status == 'gameover'
+      return next(new restify.LockedError('GameOver'))
+
+    if game.turn != user.username
+      return next(new restify.BadRequestError('WaitForYourTurn'))
+
+    next()
+
   # Checks move req.body.moveData via RulesService and in case it is valid,
   # populates req.params.newGameState and calls next().
   verifyMove = (req, res, next) ->
     game = clone(req.params.game)
-    game.moveData = req.body?.moveData
-
-    if !game.moveData
-      return next(new restify.BadRequestError('MissingMoveData'))
+    game.moveData = req.body.moveData
 
     rules = new RulesClient restify.createJsonClient(
       url: urllib.format
@@ -138,7 +153,7 @@ module.exports = (options={}) ->
       authMiddleware, retrieveGameMiddleware, participantsOnly, retrieveMoves
     server.post "/#{prefix}/auth/:authToken/games/:gameId/moves",
       authMiddleware, retrieveGameMiddleware, participantsOnly,
-      verifyMove, addMove
+      validateMoveData, verifyMove, addMove
 
     # TODO:
     # Game Collection

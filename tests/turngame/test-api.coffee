@@ -97,7 +97,21 @@ describe "turngame-api", ->
           .get endpoint("/auth/#{users.jdoe.token}/games/bad-#{game.id}/moves")
           .expect 404, done
 
+    # So the important thing here is that tests are run in order.
     describe 'POST /auth/:token/games/:id/moves', () ->
+      # This will try to make a move as Alice when it is Bob's turn
+      it 'checks that move is performed in compliance with gameState.turn',
+      (done) ->
+        go()
+          .post endpoint("/auth/#{users.alice.token}/games/#{game.id}/moves")
+          .send {moveData: samples.nextMove.move}
+          .expect 400
+          .end (err, res) ->
+            expect(err).to.be(null)
+            expect(res.body.message).to.be('WaitForYourTurn')
+            done()
+
+      # This will post a successful move as Bob and finish the game
       it 'adds move to a game and returns new game state', (done) ->
         go()
           .post endpoint("/auth/#{users.bob.token}/games/#{game.id}/moves")
@@ -107,6 +121,18 @@ describe "turngame-api", ->
             expect(err).to.be(null)
             expect(res.body).to.eql(samples.gameNew)
             done()
+
+      # This is ran after game is finished.
+      it 'replies with http 423 when trying to make a move in a finished game',
+      (done) ->
+        go()
+          .post endpoint("/auth/#{users.bob.token}/games/#{game.id}/moves")
+          .send {moveData: samples.nextMove.move}
+          .expect 423, done
+
+      # Following test check some edge-cases which are in middleware
+      # ran before any move verification logic takes place, so don't depend
+      # on order.
 
       it 'replies with 400 in case of missing body.moveData', (done) ->
         go()
