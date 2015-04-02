@@ -1,9 +1,13 @@
 restify = require 'restify'
 authdb = require 'authdb'
 redis = require 'redis'
+urllib = require 'url'
 config = require '../../config'
 log = require '../log'
 Games = require './games'
+RulesClient = require './rules-client'
+
+clone = (obj) -> JSON.parse(JSON.stringify(obj))
 
 module.exports = (options={}) ->
   #
@@ -76,8 +80,51 @@ module.exports = (options={}) ->
       res.json(moves)
       next()
 
+  # Checks move req.body.moveData via RulesService and in case it is valid,
+  # populates req.params.newGameState and calls next().
+  verifyMove = (req, res, next) ->
+    game = clone(req.params.game)
+    game.moveData = req.body.moveData
+    rules = new RulesClient restify.createJsonClient(
+      url: urllib.format
+        protocol: 'http'
+        hostname: config.rules.host
+        port: config.rules.port
+        pathname: game.type
+    )
+
+    rules.moves game, (err, rulesErr, newState) ->
+      if (err)
+        # Something's wrong with HTTP request, not necessarily move itself.
+        return next(new restify.InternalServerError)
+
+      if (rulesErr)
+        # Request finished, but move was rejected by Rules Service;
+        # rulesErr is a restify.RestError returned by rules services,
+        # just forward that to client.
+        unless rulesErr instanceof restify.RestError
+          log.warn 'addMove(): RulesClient.moves() returned Rules Error of
+                    unexpected type', {rulesErr: rulesErr}
+        return next(rulesErr)
+
+      # Save this info for later
+      req.params.newGameState = newState
+      req.params.newMove =
+        player: game.turn
+        move: game.moveData
+
+      next()
+
   addMove = (req, res, next) ->
-    next(new restify.NotImplementedError)
+    newState = req.params.newGameState
+    move = req.params.newMove
+
+    games.addMove newState.id, newState, move, (err) ->
+      if (err)
+        return next(new restify.InternalServerError)
+
+      res.json(newState)
+      next()
 
   return (prefix, server) ->
     # Single Game
@@ -86,7 +133,7 @@ module.exports = (options={}) ->
     server.get "/#{prefix}/auth/:authToken/games/:gameId/moves",
       authMiddleware, retrieveGameMiddleware, participantsOnly, retrieveMoves
     server.post "/#{prefix}/auth/:authToken/games/:gameId/moves",
-      authMiddleware, addMove
+      authMiddleware, retrieveGameMiddleware, verifyMove, addMove
 
     # TODO:
     # Game Collection

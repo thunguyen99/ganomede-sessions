@@ -1,22 +1,43 @@
+clone = (obj) -> JSON.parse(JSON.stringify(obj))
+
 users =
   'alice': {username: 'alice', token: 'alice-token'}
   'bob': {username: 'bob', token: 'bob-token'}
   'jdoe': {username: 'jdoe', token: 'jdoe-token'}
 
+# This is a game state with moves made.
 game =
   id: 'game-id'
-  type: 'multiplayer-substract-game/v1'
+  type: 'substract-game/v1'
   players: ['alice', 'bob']
-  turn: 'alice'
+  scores: [0, 0]
+  turn: 'bob'
   status: 'active'
   gameData:
-    current: 100
+    total: 90
+    nMoves: 1
 
 moves = [
-  {player: game.players[0], move: {data: 'move-0-data'}}
+  {player: game.players[0], move: {number: 10}}
 ]
+
+# This is a new move someone makes.
+nextMove =
+  player: game.players[1]
+  move: {number: 90}
+
+# This is a game state after nextMove was made.
+gameNew = clone(game)
+gameNew.status = 'gameover'
+gameNew.scores = [0, 20]
+gameNew.turn
+gameNew.gameData =
+  total: game.gameData.total - nextMove.move.number
+  nMoves: game.gameData.nMoves + 1
 
 module.exports =
   users: users
   game: game
+  gameNew: gameNew
   moves: moves
+  nextMove: nextMove

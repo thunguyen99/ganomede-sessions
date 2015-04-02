@@ -98,6 +98,14 @@ describe "turngame-api", ->
           .expect 404, done
 
     describe 'POST /auth/:token/games/:id/moves', () ->
-      it 'adds move to a game'
+      it 'adds move to a game and returns new game state', (done) ->
+        go()
+          .post endpoint("/auth/#{users.bob.token}/games/#{game.id}/moves")
+          .send {moveData: samples.nextMove.move}
+          .expect 200
+          .end (err, res) ->
+            expect(err).to.be(null)
+            expect(res.body).to.eql(samples.gameNew)
+            done()
 
 # vim: ts=2:sw=2:et:
