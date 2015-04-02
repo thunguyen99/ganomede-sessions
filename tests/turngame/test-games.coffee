@@ -8,9 +8,7 @@ describe 'Games', () ->
   redis = fakeRedis.createClient(__filename)
   games = new Games(redis, config.redis.prefix)
   game = samples.game
-  moves = [
-    {player: game.players[0], move: {data: 'move-0-data'}}
-  ]
+  moves = samples.moves
 
   after (done) ->
     redis.flushdb(done)

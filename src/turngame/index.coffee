@@ -2,6 +2,7 @@ restify = require 'restify'
 authdb = require 'authdb'
 redis = require 'redis'
 config = require '../../config'
+log = require '../log'
 Games = require './games'
 
 module.exports = (options={}) ->
@@ -68,7 +69,12 @@ module.exports = (options={}) ->
     res.json(req.params.game)
 
   retrieveMoves = (req, res, next) ->
-    next(new restify.NotImplementedError)
+    games.moves req.params.game.id, (err, moves) ->
+      if (err)
+        return next(new restify.InternalServerError)
+
+      res.json(moves)
+      next()
 
   addMove = (req, res, next) ->
     next(new restify.NotImplementedError)
@@ -78,7 +84,7 @@ module.exports = (options={}) ->
     server.get "/#{prefix}/auth/:authToken/games/:gameId",
       authMiddleware, retrieveGameMiddleware, participantsOnly, retrieveGame
     server.get "/#{prefix}/auth/:authToken/games/:gameId/moves",
-      authMiddleware, retrieveMoves
+      authMiddleware, retrieveGameMiddleware, participantsOnly, retrieveMoves
     server.post "/#{prefix}/auth/:authToken/games/:gameId/moves",
       authMiddleware, addMove
 
