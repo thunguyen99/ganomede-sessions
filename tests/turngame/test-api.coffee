@@ -38,7 +38,7 @@ describe "turngame-api", ->
         server.listen.bind(server)
         games.setState.bind(games, game.id, game)
         (cb) -> vasync.forEachParallel
-          func: games.addMove.bind(games, game.id)
+          func: games.addMove.bind(games, game.id, game)
           inputs: moves
         , cb
       ], done

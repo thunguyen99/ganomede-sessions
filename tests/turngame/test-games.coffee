@@ -34,7 +34,7 @@ describe 'Games', () ->
       done()
 
   it '#addMove() adds move to game by game ID', (done) ->
-    games.addMove game.id, moves[0], (err) ->
+    games.addMove game.id, game, moves[0], (err) ->
       expect(err).to.be(null)
       done()
 
