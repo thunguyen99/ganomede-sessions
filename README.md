@@ -1,56 +1,95 @@
-Avatars
------------
+Sessions
+--------
 
-User avatars.
+User sessions is a generic storage system for user data, like game settings, unlocked levels, etc.
 
 Relations
 ---------
 
-The avatar module will:
+The sessions module will:
 
- * Associate users with a avatar picture.
- * Create thumbnails of different sizes.
- * Store pictures and thumbnails as CouchDB attachment.
+ * Associate users with sessions object.
+ * Store sessions in Redis.
  * Use the `redis_auth` database to check requester identity.
+ * Include some simple mechanisms to prevent sunday's hackers from changing their session.
 
 Configuration
 -------------
 
  * `REDIS_AUTH_PORT_6379_TCP_ADDR` - IP of the AuthDB redis
  * `REDIS_AUTH_PORT_6379_TCP_PORT` - Port of the AuthDB redis
- * `COUCH_AVATARS_PORT_5984_TCP_ADDR` - IP of the Avatars couchdb
- * `COUCH_AVATARS_PORT_5984_TCP_PORT` - Port of the Avatars couchdb
+ * `REDIS_SESSIONS_PORT_6379_TCP_ADDR` - IP of the Sessions redis
+ * `REDIS_SESSIONS_PORT_6379_TCP_PORT` - Port of the Sessions redis
+ * `TYPES` - Comma separated list of valid types recognized by the instance
+ * `SALT` - A chain of characters know by the client and server to encode data
 
 API
 ---
 
-# User's avatar pictures [/avatars/v1/auth/:token/pictures]
+# User sessions [/avatars/v1/auth/:token/sessions/:type]
 
     + Parameters
         + token (string) ... User authentication token
+        + type (string) ... Type of session
 
-## Set avatar picture [POST]
+## Load a session [GET]
 
-Will:
-
- * crop the image to be a square
- * create resized versions 512x512, 256x256, 128x128 and 64x64
- * set a `disk` shaped opacity mask over them
- * store PNG images in CouchDB as attachment (overriding any previously stored images).
-
-### body [image/jpeg]
+    {
+        ... data ...
+    }
 
 ### response [200] OK
 
-# Round thumbnail [/avatars/v1/:username/round/:radius]
+## Save a session [POST]
 
-    + Parameters
-        + username (string) ... User to retrieve the avatar image of
-        + radius (integer) ... Disk image radius (64, 128, 256 or 256)
+To prevent sending any data, payload is hashed using HMAC-SHA1, server should verify that `hash` matches the payload. See sample code at the end of README.
 
-## Get [GET]
+### body [application/json]
+
+    {
+        "hash": "base-64-data",
+        "payload": "base-64-data"
+    }
 
 ### response [200] OK
 
-Content-type: image/png
+### Notes
+
+A session object shouldn't exceed 16KB (to prevent people from using this service as free storage).
+
+Session object `key` in redis should be something like `#{username}@#{type}`, as `@` is a forbidden character in usernames.
+
+In case a session object was already in DB, it will be overriden in any cases.
+
+The `type` parameter should be one of those defined by TYPES environment variables.
+
+# Decoding the payload
+
+```js
+if (body.hash !== computeHash(body.payload)) {
+    // Send 400, Bad Request.
+}
+
+var data = {};
+try {
+    var data = JSON.parse(new Buffer(body.payload, 'base64').toString('utf-8'));
+}
+catch (err) {
+    // Send 400 Bad Request. Invalid payload.
+}
+
+function computeHash(payload) {
+    return '' + crypto.HmacSHA1(payload, config.SALT);
+};
+```
+
+Of course, someone with bad intentions may discover the `SALT` by decompiling the client app, but this will make things a bit harder.
+
+# Contributing
+
+ * Run unit-tests using `make test` (or `npm test`).
+ * Generate code coverage report using `make coverage`.
+ * Run a test server locally (using docker) attached with redis databases using `make docker-run`
+ * For any question, contact Jean-Christophe (j3k0), or post an issue.
+ * The newly created [ganomede-helpers npm module](https://github.com/j3k0/ganomede-helpers) includes utility methods, like authentication middleware and such. Make sure you take a look before redeveloping things that are already out there.
 

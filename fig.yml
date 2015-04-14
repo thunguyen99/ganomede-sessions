@@ -3,3 +3,19 @@ app:
     command: make BUNYAN_LEVEL=0 run
     ports:
      - "8000:8000"
+    links:
+     - redisSessions:redis_sessions
+     - redisAuth:redis_auth
+    environment:
+     - "TYPES=game1,game2"
+     - "SALT=abcd1234"
+
+redisSessions:
+    image: tutum/redis:latest
+    environment:
+     - "REDIS_PASS=**None**"
+
+redisAuth:
+    image: tutum/redis:latest
+    environment:
+     - "REDIS_PASS=**None**"
